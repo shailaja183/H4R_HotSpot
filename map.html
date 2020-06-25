@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- title of html page -->
+    <title> Hotspot HeatMaps </title>
+    <meta charset="utf-8" />
+
+    <!-- include leaflet css file for stle of map -->
+    <link rel="stylesheet" href="https://d19vzq90twjlae.cloudfront.net/leaflet-0.7/leaflet.css" />
+
+    </style>
+</head>
+<body>
+    <!-- header of the webpage -->
+    <p> <h1> HeatMap of Hyderabad based on Covid Hotspots </h1> </p>
+
+    <!-- div for map -->
+    <div id="map" style="height:600px;width: 800px"></div>
+
+    <!-- include leaflet js and heat-js file for adding map -->
+    <script src="https://d19vzq90twjlae.cloudfront.net/leaflet-0.7/leaflet.js"></script>
+    <script src="https://leaflet.github.io/Leaflet.heat/dist/leaflet-heat.js"></script>
+    <script src="map_data.js"></script>
+    <script>
+ 
+        // set map at 17.40,78.44 location
+        var map = L.map('map').setView([17.40,78.44],11);
+        // dump map from openstreetmap and set related parameters
+        mapLink = 
+            '<a href="http://openstreetmap.org">OpenStreetMap</a>';
+        L.tileLayer(
+            'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; ' + mapLink + ' Contributors',
+            maxZoom: 18,
+        }).addTo(map);
+        
+        // add heatmap layer over map
+        var heat = L.heatLayer(hmPoints,{
+            radius: 10,
+            blur: 5, 
+            maxZoom: 18,
+        }).addTo(map);
+
+    </script>
+</body>
+</html>

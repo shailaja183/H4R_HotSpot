@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html class="ocks-org do-not-copy">
+<meta charset="utf-8">
+
+<!-- title of html page -->
+<title>Mobility Matrix</title>
+
+<style>
+@import url(../style.css?aea6f0a);
+.background {
+  fill: #eee;
+}
+line {
+  stroke: #fff;
+}
+text.active {
+  fill: red;
+}
+</style>
+
+<!-- include d3.js as a plugin -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/2.10.0/d3.v2.min.js" charset="utf-8"></script>
+
+<!-- basic information to display on webpage -->
+<p>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; </p> 
+<p> <h1> Mobility Observations in Containment Zones of Hyderabad </h1> 
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; Reference for Containment Zones: <a href="https://www.freepressjournal.in/india/hotspots-in-hyderabad-full-list-of-containment-zones-during-lockdown"> FreePress Journal </a> <br/>  
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; Proposed Mobility Data usage based on: <a href="https://www.quadrant.io/resources/location-data#attributes_fields"> Quadrant.io / Asia Pacific Data Alliance </a> </p>
+<!-- dropdown list for sorting options -->
+<p>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; Sort Mobility Matrix: <select id="order">
+  <option value="name">by Area Names alphabetically (default) </option>
+  <option value="count">by Frequency of Mobility </option>
+  <option value="group">by Clusters Rachakonda, Hyderabad and Cyberabad </option>
+</select> </p> <br/><br/>
+
+</aside>
+
+<script>
+// margin configurations
+var margin = {top: 80, right: 0, bottom: 10, left: 80}, width = 720, height = 720;
+
+// some variables related to matrix plotting
+var x = d3.scale.ordinal().rangeBands([0, width]),
+    z = d3.scale.linear().domain([0, 4]).clamp(true),
+    c = d3.scale.category10().domain(d3.range(10));
+
+// create svg with given margin configurations
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .style("margin-left", margin.left + "px")
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+// read data from json file 
+d3.json("./matrix_data.json", function(miserables) {
+  var matrix = [],
+      nodes = miserables.nodes,
+      n = nodes.length;
+
+// compute index for each node
+nodes.forEach(function(node, i) {
+  node.index = i;
+  node.count = 0;
+  matrix[i] = d3.range(n).map(function(j) { return {x: j, y: i, z: 0}; });
+});
+
+// convert links in json file in matrix (symmetric for now) format
+miserables.links.forEach(function(link) {
+  matrix[link.source][link.target].z += link.value;
+  matrix[link.target][link.source].z += link.value;
+  matrix[link.source][link.source].z += link.value;
+  matrix[link.target][link.target].z += link.value;
+  nodes[link.source].count += link.value;
+  nodes[link.target].count += link.value;
+});
+
+// orders for 3 sort operations
+var orders = {
+  name: d3.range(n).sort(function(a, b) { return d3.ascending(nodes[a].name, nodes[b].name); }),
+  count: d3.range(n).sort(function(a, b) { return nodes[b].count - nodes[a].count; }),
+  group: d3.range(n).sort(function(a, b) { return nodes[b].group - nodes[a].group; })
+};
+
+// default sort order.
+x.domain(orders.name);
+
+// add background rectangle for matrix 
+svg.append("rect")
+    .attr("class", "background")
+    .attr("width", width)
+    .attr("height", height);
+
+// identify number of rows required from data 
+var row = svg.selectAll(".row")
+    .data(matrix)
+    .enter().append("g")
+    .attr("class", "row")
+    .attr("transform", function(d, i) { return "translate(0," + x(i) + ")"; })
+    .each(row);
+row.append("line")
+    .attr("x2", width);
+
+// add text-labels in row
+row.append("text")
+    .attr("x", -6)
+    .attr("y", x.rangeBand() / 2)
+    .attr("dy", ".32em")
+    .attr("text-anchor", "end")
+    .attr("font-size", "10px")
+    .text(function(d, i) { return nodes[i].name; });
+
+// identify number of columns required from data 
+var column = svg.selectAll(".column")
+    .data(matrix)
+  .enter().append("g")
+    .attr("class", "column")
+    .attr("transform", function(d, i) { return "translate(" + x(i) + ")rotate(-90)"; });
+column.append("line")
+    .attr("x1", -width);
+
+// add text-labels in column
+column.append("text")
+    .attr("x", 6)
+    .attr("y", x.rangeBand() / 2)
+    .attr("dy", ".32em")
+    .attr("text-anchor", "start")
+    .attr("font-size", "10px")
+    .text(function(d, i) { return nodes[i].name; });
+
+// create rectangles for each pair of nodes in matrix, 
+// color it based on its group and color intensity represents traffic density
+function row(row) {
+  var cell = d3.select(this).selectAll(".cell")
+      .data(row.filter(function(d) { return d.z; }))
+    .enter().append("rect")
+      .attr("class", "cell")
+      .attr("x", function(d) { return x(d.x); })
+      .attr("width", x.rangeBand())
+      .attr("height", x.rangeBand())
+      .style("fill-opacity", function(d) { return z(d.z); })
+      .style("fill", function(d) { return nodes[d.x].group == nodes[d.y].group ? c(nodes[d.x].group) : null; })
+      .on("mouseover", mouseover)
+      .on("mouseout", mouseout);
+}
+
+// highlight effect on mouseover
+function mouseover(p) {
+  d3.selectAll(".row text").classed("active", function(d, i) { return i == p.y; });
+  d3.selectAll(".column text").classed("active", function(d, i) { return i == p.x; });
+}
+
+// clear effect on mouseout
+function mouseout() {
+  d3.selectAll("text").classed("active", false);
+}
+
+// function call to sort matrix
+d3.select("#order").on("change", function() {
+  order(this.value);
+});
+
+// logic to sort matrix based on dropdown menu 
+function order(value) {
+  x.domain(orders[value]);
+
+  var t = svg.transition().duration(2500);
+
+  t.selectAll(".row")
+      .delay(function(d, i) { return x(i) * 4; })
+      .attr("transform", function(d, i) { return "translate(0," + x(i) + ")"; })
+    .selectAll(".cell")
+      .delay(function(d) { return x(d.x) * 4; })
+      .attr("x", function(d) { return x(d.x); });
+
+  t.selectAll(".column")
+      .delay(function(d, i) { return x(i) * 4; })
+      .attr("transform", function(d, i) { return "translate(" + x(i) + ")rotate(-90)"; });
+}
+});
+
+</script>
