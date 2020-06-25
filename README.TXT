@@ -23,6 +23,12 @@ Running multinode.m models disease spread in 32 connected clusters. The model is
 2.3 matrix.html: User Interface that displays Mobility Information among various Containment Regions of Hyderabad
 2.4 matrix_data.json: contains Mobility data required to render matrix.html
 
+In the folder "documentation and references":
+
+3. The research paper based on which the model was constructed has also been added as the file SIR_covid.pdf 
+
+4. A copy of the writeup/article in PDF format has been added for reference.
+ 
 
 B. INTEGRATION
 
